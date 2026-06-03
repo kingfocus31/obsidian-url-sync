@@ -1,0 +1,10 @@
+{
+  "id": "obsidian-bilibili-sync",
+  "name": "Bilibili to Obsidian",
+  "version": "1.1.0",
+  "minAppVersion": "0.15.0",
+  "description": "将B站UP主、合集、系列的视频列表同步到Obsidian笔记",
+  "author": "Your Name",
+  "authorUrl": "https://github.com/your-username",
+  "isDesktopOnly": false
+}
