@@ -50,32 +50,20 @@
 
 ## 📸 截图
 
-> 请截图以下界面，放到 screenshots 文件夹：
+### Ribbon图标
+![Ribbon图标](screenshots/ribbon-icon.png)
 
-1. **同步面板** - 主界面，包含URL输入和目录选择
-   ```
-   截图要点：显示完整的同步面板，包括URL输入框、目录树、开始同步按钮
-   ```
+### 同步面板
+![同步面板](screenshots/sync-panel.png)
 
-2. **树形目录选择器** - 展开的目录树
-   ```
-   截图要点：展示多级目录结构
-   ```
+### 历史记录
+![历史记录](screenshots/history.png)
 
-3. **历史记录** - 历史同步列表
-   ```
-   截图要点：显示历史记录项，包含类型标签、标题、URL
-   ```
+### 设置页面
+![设置](screenshots/settings.png)
 
-4. **设置页面** - 插件设置
-   ```
-   截图要点：显示所有配置项：索引设置、同步根目录、排除目录
-   ```
-
-5. **同步结果** - 同步完成后的笔记预览
-   ```
-   截图要点：展示生成的笔记内容，包含表格
-   ```
+### 同步结果
+![同步结果](screenshots/sync-result.png)
 
 ---
 
@@ -171,7 +159,9 @@
 
 如果觉得这个插件很有用，并且想要它继续开发，请在以下方式支持我们，感谢您对开源软件的支持:
 
-<a href="https://www.buymeacoffee.com/" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" height="41" width="173"></a>
+| 微信赞赏 | 
+| :---: |
+| ![微信赞赏](screenshots/wechat.jpg) |
 
 ---
 

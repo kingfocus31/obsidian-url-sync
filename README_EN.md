@@ -138,7 +138,9 @@ If you have suggestions or new ideas, please share them by creating an [Issue](h
 
 If you find this plugin useful and want it to continue development, please support us through:
 
-<a href="https://www.buymeacoffee.com/" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" height="41" width="173"></a>
+| WeChat | 
+| :---: |
+| ![WeChat](screenshots/wechat.jpg) |
 
 ---
 
