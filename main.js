@@ -689,18 +689,14 @@ var TreeSelectComponent = class {
     const path = parentPath ? `${parentPath}/${folder.name}` : folder.name;
     const children = [];
     if (!isRoot && this.isExcluded(path)) {
-      return {
-        name: folder.name,
-        path,
-        children: [],
-        isExpanded: false,
-        isSelected: false,
-        isFolder: true
-      };
+      return null;
     }
     for (const child of folder.children) {
       if (child instanceof import_obsidian3.TFolder && !child.name.startsWith(".")) {
-        children.push(this.buildNode(child, isRoot ? "" : path));
+        const childNode = this.buildNode(child, isRoot ? "" : path);
+        if (childNode) {
+          children.push(childNode);
+        }
       }
     }
     children.sort((a, b) => a.name.localeCompare(b.name));
@@ -717,6 +713,8 @@ var TreeSelectComponent = class {
   isExcluded(path) {
     const fullPath = this.basePath ? `${this.basePath}/${path}` : path;
     return this.excludedDirs.some((excluded) => {
+      if (!excluded)
+        return false;
       const fullExcludedPath = this.basePath && !excluded.startsWith(this.basePath) ? `${this.basePath}/${excluded}` : excluded;
       return fullPath === fullExcludedPath || fullPath.startsWith(fullExcludedPath + "/") || fullPath === excluded || fullPath.startsWith(excluded + "/") || path === excluded || path.startsWith(excluded + "/");
     });

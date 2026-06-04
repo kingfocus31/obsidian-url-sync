@@ -56,22 +56,18 @@ export class TreeSelectComponent {
     const path = parentPath ? `${parentPath}/${folder.name}` : folder.name;
     const children: TreeNode[] = [];
 
-    // 检查是否在排除列表中
+    // 检查是否在排除列表中（非根节点）
     if (!isRoot && this.isExcluded(path)) {
-      return {
-        name: folder.name,
-        path,
-        children: [],
-        isExpanded: false,
-        isSelected: false,
-        isFolder: true,
-      };
+      return null as any; // 返回 null，稍后过滤
     }
 
     // 添加子文件夹
     for (const child of folder.children) {
       if (child instanceof TFolder && !child.name.startsWith('.')) {
-        children.push(this.buildNode(child, isRoot ? '' : path));
+        const childNode = this.buildNode(child, isRoot ? '' : path);
+        if (childNode) {
+          children.push(childNode);
+        }
       }
     }
 
@@ -93,6 +89,8 @@ export class TreeSelectComponent {
     const fullPath = this.basePath ? `${this.basePath}/${path}` : path;
     
     return this.excludedDirs.some(excluded => {
+      if (!excluded) return false;
+      
       // 构建可能的完整排除路径
       const fullExcludedPath = this.basePath && !excluded.startsWith(this.basePath) 
         ? `${this.basePath}/${excluded}` 
