@@ -9,9 +9,7 @@
 
 > 快速同步B站视频列表到Obsidian，支持UP主主页、合集、系列等多种链接格式，自动增量更新，历史记录一键重新同步。
 
-如有问题请新建 [Issue](https://github.com/kingfocus31/obsidian-url-sync/issues)，或加入电报交流群寻求帮助: https://t.me/obsidian_users
-
-中国大陆地区，推荐使用腾讯 cnb.cool 镜像库: https://cnb.cool/kingfocus31/obsidian-url-sync
+如有问题请新建 [Issue](https://github.com/kingfocus31/obsidian-url-sync/issues)
 
 ---
 
@@ -58,6 +56,9 @@
 
 ### 历史记录
 ![历史记录](screenshots/history.png)
+
+### 历史详情
+![历史详情](screenshots/history-result.png)
 
 ### 设置页面
 ![设置](screenshots/settings.png)
