@@ -822,7 +822,8 @@ var TreeSelectComponent = class {
     this.rerender();
   }
   setSelectionByPath(node, path) {
-    if (node.path === path) {
+    const relativePath = this.basePath && path.startsWith(this.basePath + "/") ? path.substring(this.basePath.length + 1) : path;
+    if (node.path === relativePath) {
       node.isSelected = true;
       return true;
     }

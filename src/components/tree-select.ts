@@ -242,7 +242,12 @@ export class TreeSelectComponent {
   }
 
   private setSelectionByPath(node: TreeNode, path: string): boolean {
-    if (node.path === path) {
+    // 尝试匹配完整路径或相对路径
+    const relativePath = this.basePath && path.startsWith(this.basePath + '/')
+      ? path.substring(this.basePath.length + 1)
+      : path;
+    
+    if (node.path === relativePath) {
       node.isSelected = true;
       return true;
     }
