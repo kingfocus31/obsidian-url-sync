@@ -780,7 +780,8 @@ var TreeSelectComponent = class {
     node.isSelected = true;
     this.selectedPath = node.path;
     this.rerender();
-    this.onSelectionChange(node.path);
+    const fullPath = this.basePath && node.path ? `${this.basePath}/${node.path}` : node.path;
+    this.onSelectionChange(fullPath);
   }
   clearSelection(node) {
     node.isSelected = false;

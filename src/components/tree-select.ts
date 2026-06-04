@@ -188,8 +188,11 @@ export class TreeSelectComponent {
     // 重新渲染
     this.rerender();
     
-    // 触发回调
-    this.onSelectionChange(node.path);
+    // 触发回调 - 返回完整路径（包含 basePath）
+    const fullPath = this.basePath && node.path 
+      ? `${this.basePath}/${node.path}` 
+      : node.path;
+    this.onSelectionChange(fullPath);
   }
 
   private clearSelection(node: TreeNode): void {
