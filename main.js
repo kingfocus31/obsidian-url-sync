@@ -27,7 +27,7 @@ __export(main_exports, {
   default: () => BilibiliSyncPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian5 = require("obsidian");
+var import_obsidian7 = require("obsidian");
 
 // src/bilibili-client.ts
 var import_obsidian = require("obsidian");
@@ -1073,6 +1073,255 @@ var SyncPanel = class extends import_obsidian4.ItemView {
   }
 };
 
+// src/web-clipper-panel.ts
+var import_obsidian6 = require("obsidian");
+
+// src/web-clipper.ts
+var import_obsidian5 = require("obsidian");
+var WebClipper = class {
+  constructor(vault, imageFolder = "\u9644\u4EF6/\u7F51\u9875\u526A\u85CF") {
+    this.vault = vault;
+    this.imageFolder = imageFolder;
+  }
+  async clipUrl(url) {
+    const response = await (0, import_obsidian5.requestUrl)({
+      url,
+      method: "GET",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8"
+      }
+    });
+    const html = response.text;
+    return this.parseHtml(html, url);
+  }
+  async parseHtml(html, sourceUrl) {
+    var _a, _b, _c, _d;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+    const title = ((_a = doc.querySelector("title")) == null ? void 0 : _a.textContent) || "\u672A\u547D\u540D\u6587\u7AE0";
+    const content = ((_b = doc.querySelector("article, .Post-RichTextContainer, .RichContent-inner, main")) == null ? void 0 : _b.innerHTML) || "";
+    const author = ((_c = doc.querySelector(".AuthorInfo-name, .UserLink-link")) == null ? void 0 : _c.textContent) || "";
+    const publishDate = ((_d = doc.querySelector(".ContentItem-time, time")) == null ? void 0 : _d.textContent) || "";
+    const images = await this.extractImages(doc, sourceUrl);
+    return {
+      title,
+      content: this.htmlToMarkdown(content, images),
+      images,
+      sourceUrl,
+      author,
+      publishDate
+    };
+  }
+  async extractImages(doc, sourceUrl) {
+    const images = [];
+    const imgElements = doc.querySelectorAll("img");
+    const imgArray = Array.from(imgElements);
+    for (const img of imgArray) {
+      const src = img.getAttribute("data-original") || img.getAttribute("data-actualsrc") || img.getAttribute("src");
+      if (src && !src.startsWith("data:")) {
+        const absoluteUrl = this.resolveUrl(src, sourceUrl);
+        const localPath = await this.downloadImage(absoluteUrl);
+        images.push({ url: absoluteUrl, localPath });
+      }
+    }
+    return images;
+  }
+  resolveUrl(url, base) {
+    try {
+      return new URL(url, base).href;
+    } catch (e) {
+      return url;
+    }
+  }
+  async downloadImage(url) {
+    const response = await (0, import_obsidian5.requestUrl)({ url });
+    const buffer = response.arrayBuffer;
+    const ext = this.getExtension(url);
+    const filename = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}${ext}`;
+    const filepath = `${this.imageFolder}/${filename}`;
+    await this.ensureFolder(this.imageFolder);
+    await this.vault.createBinary(filepath, buffer);
+    return filepath;
+  }
+  getExtension(url) {
+    const match = url.match(/\.(jpg|jpeg|png|gif|webp|svg)/i);
+    return match ? `.${match[1].toLowerCase()}` : ".jpg";
+  }
+  async ensureFolder(path) {
+    const parts = path.split("/");
+    let current = "";
+    for (const part of parts) {
+      current = current ? `${current}/${part}` : part;
+      const folder = this.vault.getAbstractFileByPath(current);
+      if (!folder) {
+        await this.vault.createFolder(current);
+      }
+    }
+  }
+  htmlToMarkdown(html, images) {
+    let markdown = html;
+    markdown = markdown.replace(/<h1[^>]*>(.*?)<\/h1>/gi, "# $1\n\n");
+    markdown = markdown.replace(/<h2[^>]*>(.*?)<\/h2>/gi, "## $1\n\n");
+    markdown = markdown.replace(/<h3[^>]*>(.*?)<\/h3>/gi, "### $1\n\n");
+    markdown = markdown.replace(/<h4[^>]*>(.*?)<\/h4>/gi, "#### $1\n\n");
+    markdown = markdown.replace(/<h5[^>]*>(.*?)<\/h5>/gi, "##### $1\n\n");
+    markdown = markdown.replace(/<h6[^>]*>(.*?)<\/h6>/gi, "###### $1\n\n");
+    markdown = markdown.replace(/<strong[^>]*>(.*?)<\/strong>/gi, "**$1**");
+    markdown = markdown.replace(/<b[^>]*>(.*?)<\/b>/gi, "**$1**");
+    markdown = markdown.replace(/<em[^>]*>(.*?)<\/em>/gi, "*$1*");
+    markdown = markdown.replace(/<i[^>]*>(.*?)<\/i>/gi, "*$1*");
+    markdown = markdown.replace(/<a[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi, "[$2]($1)");
+    markdown = markdown.replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gi, "> $1\n\n");
+    markdown = markdown.replace(/<code[^>]*>(.*?)<\/code>/gi, "`$1`");
+    markdown = markdown.replace(/<pre[^>]*><code[^>]*>(.*?)<\/code><\/pre>/gi, "```\n$1\n```\n\n");
+    markdown = markdown.replace(/<ul[^>]*>(.*?)<\/ul>/gi, "$1\n");
+    markdown = markdown.replace(/<ol[^>]*>(.*?)<\/ol>/gi, "$1\n");
+    markdown = markdown.replace(/<li[^>]*>(.*?)<\/li>/gi, "- $1\n");
+    markdown = markdown.replace(/<br\s*\/?>/gi, "\n");
+    markdown = markdown.replace(/<p[^>]*>(.*?)<\/p>/gi, "$1\n\n");
+    for (const img of images) {
+      markdown = markdown.replace(new RegExp(`<img[^>]*src="${this.escapeRegex(img.url)}"[^>]*/?>`, "g"), `![](${img.localPath})`);
+    }
+    markdown = markdown.replace(/<figure[^>]*>([\s\S]*?)<\/figure>/gi, "$1");
+    markdown = markdown.replace(/<figcaption[^>]*>(.*?)<\/figcaption>/gi, "\n*$1*\n");
+    markdown = markdown.replace(/<[^>]+>/g, "");
+    markdown = markdown.replace(/&nbsp;/g, " ");
+    markdown = markdown.replace(/&amp;/g, "&");
+    markdown = markdown.replace(/&lt;/g, "<");
+    markdown = markdown.replace(/&gt;/g, ">");
+    markdown = markdown.replace(/&quot;/g, '"');
+    markdown = markdown.replace(/\n{3,}/g, "\n\n");
+    return markdown.trim();
+  }
+  escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+  async saveAsNote(result, targetDir) {
+    const filename = this.sanitizeFilename(result.title) + ".md";
+    const filepath = `${targetDir}/${filename}`;
+    await this.ensureFolder(targetDir);
+    const frontmatter = [
+      "---",
+      `title: "${result.title}"`,
+      `source: "${result.sourceUrl}"`,
+      result.author ? `author: "${result.author}"` : "",
+      result.publishDate ? `date: "${result.publishDate}"` : "",
+      `clipped: "${(/* @__PURE__ */ new Date()).toISOString()}"`,
+      "---",
+      ""
+    ].filter(Boolean).join("\n");
+    const content = frontmatter + result.content;
+    const existingFile = this.vault.getAbstractFileByPath(filepath);
+    if (existingFile instanceof import_obsidian5.TFile) {
+      await this.vault.modify(existingFile, content);
+    } else {
+      await this.vault.create(filepath, content);
+    }
+    return filepath;
+  }
+  sanitizeFilename(name) {
+    return name.replace(/[\\/:*?"<>|]/g, "_").substring(0, 100);
+  }
+};
+
+// src/web-clipper-panel.ts
+var VIEW_TYPE_WEB_CLIPPER = "web-clipper-view";
+var WebClipperPanel = class extends import_obsidian6.ItemView {
+  constructor(leaf, plugin) {
+    super(leaf);
+    this.plugin = plugin;
+    this.webClipper = new WebClipper(this.app.vault);
+  }
+  getViewType() {
+    return VIEW_TYPE_WEB_CLIPPER;
+  }
+  getDisplayText() {
+    return "\u7F51\u9875\u526A\u85CF";
+  }
+  getIcon() {
+    return "globe";
+  }
+  async onOpen() {
+    const container = this.containerEl.children[1];
+    container.empty();
+    container.addClass("web-clipper-container");
+    const titleEl = container.createEl("div", { cls: "web-clipper-title" });
+    titleEl.createEl("h2", { text: "\u7F51\u9875\u526A\u85CF\u5230 Obsidian" });
+    const urlSection = container.createEl("div", { cls: "form-section" });
+    urlSection.createEl("label", { text: "\u7F51\u9875\u5730\u5740", cls: "form-label" });
+    this.urlInput = urlSection.createEl("input", {
+      type: "text",
+      cls: "form-input",
+      placeholder: "\u8F93\u5165\u7F51\u9875\u5730\u5740\uFF0C\u5982 https://zhuanlan.zhihu.com/p/xxx"
+    });
+    const targetSection = container.createEl("div", { cls: "form-section" });
+    targetSection.createEl("label", { text: "\u4FDD\u5B58\u76EE\u5F55", cls: "form-label" });
+    this.targetInput = targetSection.createEl("input", {
+      type: "text",
+      cls: "form-input",
+      placeholder: "\u8F93\u5165\u4FDD\u5B58\u76EE\u5F55\uFF0C\u5982 \u7F51\u9875\u526A\u85CF"
+    });
+    const buttonDiv = container.createEl("div", { cls: "button-group" });
+    buttonDiv.createEl("button", { text: "\u5F00\u59CB\u526A\u85CF", cls: "mod-cta" }).addEventListener("click", () => {
+      this.startClip();
+    });
+    buttonDiv.createEl("button", { text: "\u6E05\u7A7A\u65E5\u5FD7" }).addEventListener("click", () => {
+      if (this.logDiv)
+        this.logDiv.empty();
+    });
+    this.statusDiv = container.createEl("div", { text: "\u51C6\u5907\u5C31\u7EEA", cls: "web-clipper-status" });
+    this.logDiv = container.createEl("div", { cls: "web-clipper-log" });
+  }
+  async onClose() {
+  }
+  appendLog(message) {
+    const time = (/* @__PURE__ */ new Date()).toLocaleTimeString();
+    this.logDiv.createEl("div", { text: `[${time}] ${message}` });
+    this.logDiv.scrollTop = this.logDiv.scrollHeight;
+  }
+  async startClip() {
+    const url = this.urlInput.value.trim();
+    if (!url) {
+      new import_obsidian6.Notice("\u8BF7\u8F93\u5165\u7F51\u9875\u5730\u5740");
+      return;
+    }
+    const targetDir = this.targetInput.value.trim() || "\u7F51\u9875\u526A\u85CF";
+    this.statusDiv.setText("\u526A\u85CF\u4E2D...");
+    this.urlInput.disabled = true;
+    this.targetInput.disabled = true;
+    try {
+      this.appendLog(`\u5F00\u59CB\u526A\u85CF\uFF1A${url}`);
+      const result = await this.webClipper.clipUrl(url);
+      this.appendLog(`\u89E3\u6790\u5B8C\u6210\uFF1A${result.title}`);
+      const notePath = await this.webClipper.saveAsNote(result, targetDir);
+      this.appendLog(`\u4FDD\u5B58\u6210\u529F\uFF1A${notePath}`);
+      if (this.statusDiv) {
+        this.statusDiv.setText("\u5B8C\u6210");
+      }
+      new import_obsidian6.Notice(`\u526A\u85CF\u5B8C\u6210\uFF1A${result.title}`);
+      const noteFile = this.app.vault.getAbstractFileByPath(notePath);
+      if (noteFile instanceof import_obsidian6.TFile) {
+        await this.app.workspace.openLinkText(notePath, "", true);
+      }
+    } catch (error) {
+      if (this.statusDiv) {
+        this.statusDiv.setText("\u5931\u8D25");
+      }
+      this.appendLog(`\u5931\u8D25\uFF1A${error.message}`);
+      new import_obsidian6.Notice(`\u526A\u85CF\u5931\u8D25\uFF1A${error.message}`);
+    } finally {
+      if (this.urlInput) {
+        this.urlInput.disabled = false;
+      }
+      if (this.targetInput) {
+        this.targetInput.disabled = false;
+      }
+    }
+  }
+};
+
 // main.ts
 var DEFAULT_SETTINGS = {
   enableIndexNote: true,
@@ -1080,7 +1329,7 @@ var DEFAULT_SETTINGS = {
   syncRoot: "",
   excludedDirs: []
 };
-var BilibiliSyncPlugin = class extends import_obsidian5.Plugin {
+var BilibiliSyncPlugin = class extends import_obsidian7.Plugin {
   constructor() {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
@@ -1093,12 +1342,20 @@ var BilibiliSyncPlugin = class extends import_obsidian5.Plugin {
       VIEW_TYPE_BILIBILI_SYNC,
       (leaf) => new SyncPanel(leaf, this)
     );
+    this.registerView(
+      VIEW_TYPE_WEB_CLIPPER,
+      (leaf) => new WebClipperPanel(leaf, this)
+    );
     const ribbonIconEl = this.addRibbonIcon("video", "B\u7AD9\u540C\u6B65", (evt) => {
       this.activateView();
     });
     ribbonIconEl.setAttribute("aria-label", "B\u7AD9\u540C\u6B65");
+    const webClipperIconEl = this.addRibbonIcon("globe", "\u7F51\u9875\u526A\u85CF", (evt) => {
+      this.activateWebClipperView();
+    });
+    webClipperIconEl.setAttribute("aria-label", "\u7F51\u9875\u526A\u85CF");
     ribbonIconEl.addEventListener("contextmenu", (evt) => {
-      const menu = new import_obsidian5.Menu();
+      const menu = new import_obsidian7.Menu();
       menu.addItem((item) => {
         item.setTitle("\u6253\u5F00\u540C\u6B65\u9762\u677F").onClick(() => {
           this.activateView();
@@ -1116,6 +1373,11 @@ var BilibiliSyncPlugin = class extends import_obsidian5.Plugin {
       id: "sync-bilibili-url",
       name: "\u540C\u6B65B\u7AD9\u94FE\u63A5",
       callback: () => this.openSyncModal()
+    });
+    this.addCommand({
+      id: "web-clipper",
+      name: "\u7F51\u9875\u526A\u85CF",
+      callback: () => this.activateWebClipperView()
     });
     this.addCommand({
       id: "view-sync-history",
@@ -1163,6 +1425,26 @@ var BilibiliSyncPlugin = class extends import_obsidian5.Plugin {
         leaf = rightLeaf;
         await leaf.setViewState({
           type: VIEW_TYPE_BILIBILI_SYNC,
+          active: true
+        });
+      }
+    }
+    if (leaf) {
+      workspace.revealLeaf(leaf);
+    }
+  }
+  async activateWebClipperView() {
+    const { workspace } = this.app;
+    let leaf = null;
+    const leaves = workspace.getLeavesOfType(VIEW_TYPE_WEB_CLIPPER);
+    if (leaves.length > 0) {
+      leaf = leaves[0];
+    } else {
+      const rightLeaf = workspace.getRightLeaf(false);
+      if (rightLeaf) {
+        leaf = rightLeaf;
+        await leaf.setViewState({
+          type: VIEW_TYPE_WEB_CLIPPER,
           active: true
         });
       }
@@ -1254,7 +1536,7 @@ var BilibiliSyncPlugin = class extends import_obsidian5.Plugin {
     return this.settings.indexNoteName;
   }
 };
-var BilibiliSyncModal = class extends import_obsidian5.Modal {
+var BilibiliSyncModal = class extends import_obsidian7.Modal {
   constructor(app, plugin) {
     super(app);
     this.plugin = plugin;
@@ -1285,7 +1567,7 @@ var BilibiliSyncModal = class extends import_obsidian5.Modal {
     let root;
     if (syncRoot) {
       const baseFile = vault.getAbstractFileByPath(syncRoot);
-      if (baseFile instanceof import_obsidian5.TFolder) {
+      if (baseFile instanceof import_obsidian7.TFolder) {
         root = baseFile;
       } else {
         root = vault.getRoot();
@@ -1295,7 +1577,7 @@ var BilibiliSyncModal = class extends import_obsidian5.Modal {
     }
     const addFolders = (folder, prefix = "") => {
       for (const child of folder.children) {
-        if (child instanceof import_obsidian5.TFolder && !child.name.startsWith(".")) {
+        if (child instanceof import_obsidian7.TFolder && !child.name.startsWith(".")) {
           const path = prefix ? `${prefix}/${child.name}` : child.name;
           this.categorySelect.createEl("option", {
             text: path,
@@ -1315,12 +1597,12 @@ var BilibiliSyncModal = class extends import_obsidian5.Modal {
   async startSync() {
     const url = this.urlInput.value.trim();
     if (!url) {
-      new import_obsidian5.Notice("\u8BF7\u8F93\u5165B\u7AD9\u94FE\u63A5");
+      new import_obsidian7.Notice("\u8BF7\u8F93\u5165B\u7AD9\u94FE\u63A5");
       return;
     }
     const categoryPath = this.categorySelect.value;
     if (!categoryPath) {
-      new import_obsidian5.Notice("\u8BF7\u9009\u62E9\u76EE\u6807\u5206\u7C7B\u76EE\u5F55");
+      new import_obsidian7.Notice("\u8BF7\u9009\u62E9\u76EE\u6807\u5206\u7C7B\u76EE\u5F55");
       return;
     }
     this.statusDiv.setText("\u6267\u884C\u4E2D...");
@@ -1337,16 +1619,16 @@ var BilibiliSyncModal = class extends import_obsidian5.Modal {
       if (this.plugin.settings.enableIndexNote) {
         this.appendLog(`\u7D22\u5F15\uFF1A${result.index_path}`);
       }
-      new import_obsidian5.Notice(`\u540C\u6B65\u5B8C\u6210\uFF1A${result.up_name}
+      new import_obsidian7.Notice(`\u540C\u6B65\u5B8C\u6210\uFF1A${result.up_name}
 \u65B0\u589E ${result.new_count} \u4E2A\u89C6\u9891`);
       const noteFile = this.app.vault.getAbstractFileByPath(result.note_path);
-      if (noteFile instanceof import_obsidian5.TFile) {
+      if (noteFile instanceof import_obsidian7.TFile) {
         await this.app.workspace.openLinkText(result.note_path, "", true);
       }
     } catch (error) {
       this.statusDiv.setText("\u5931\u8D25");
       this.appendLog(`\u5931\u8D25\uFF1A${error.message}`);
-      new import_obsidian5.Notice(`\u540C\u6B65\u5931\u8D25\uFF1A${error.message}`);
+      new import_obsidian7.Notice(`\u540C\u6B65\u5931\u8D25\uFF1A${error.message}`);
     } finally {
       this.urlInput.disabled = false;
       this.categorySelect.disabled = false;
@@ -1357,7 +1639,7 @@ var BilibiliSyncModal = class extends import_obsidian5.Modal {
     contentEl.empty();
   }
 };
-var HistoryModal = class extends import_obsidian5.Modal {
+var HistoryModal = class extends import_obsidian7.Modal {
   constructor(app, plugin) {
     super(app);
     this.plugin = plugin;
@@ -1387,7 +1669,7 @@ var HistoryModal = class extends import_obsidian5.Modal {
       });
       buttonDiv.createEl("button", { text: "\u6253\u5F00\u7B14\u8BB0" }).addEventListener("click", async () => {
         const noteFile = this.app.vault.getAbstractFileByPath(source.note_path);
-        if (noteFile instanceof import_obsidian5.TFile) {
+        if (noteFile instanceof import_obsidian7.TFile) {
           await this.app.workspace.openLinkText(source.note_path, "", true);
           this.close();
         }
@@ -1396,7 +1678,7 @@ var HistoryModal = class extends import_obsidian5.Modal {
         if (confirm(`\u786E\u5B9A\u8981\u5220\u9664 ${source.title} \u7684\u540C\u6B65\u8BB0\u5F55\u5417\uFF1F`)) {
           this.plugin.store.deleteSource(source.source_key);
           item.remove();
-          new import_obsidian5.Notice(`\u5DF2\u5220\u9664 ${source.title} \u7684\u540C\u6B65\u8BB0\u5F55`);
+          new import_obsidian7.Notice(`\u5DF2\u5220\u9664 ${source.title} \u7684\u540C\u6B65\u8BB0\u5F55`);
         }
       });
     }
@@ -1406,7 +1688,7 @@ var HistoryModal = class extends import_obsidian5.Modal {
     contentEl.empty();
   }
 };
-var BilibiliSyncSettingTab = class extends import_obsidian5.PluginSettingTab {
+var BilibiliSyncSettingTab = class extends import_obsidian7.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -1415,18 +1697,18 @@ var BilibiliSyncSettingTab = class extends import_obsidian5.PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     containerEl.createEl("h2", { text: "B\u7AD9\u540C\u6B65\u8BBE\u7F6E" });
-    new import_obsidian5.Setting(containerEl).setName("\u542F\u7528\u7D22\u5F15\u6587\u4EF6").setDesc("\u662F\u5426\u751F\u6210\u7D22\u5F15\u6587\u4EF6\u8BB0\u5F55\u6240\u6709\u540C\u6B65\u7684UP\u4E3B").addToggle((toggle) => toggle.setValue(this.plugin.settings.enableIndexNote).onChange(async (value) => {
+    new import_obsidian7.Setting(containerEl).setName("\u542F\u7528\u7D22\u5F15\u6587\u4EF6").setDesc("\u662F\u5426\u751F\u6210\u7D22\u5F15\u6587\u4EF6\u8BB0\u5F55\u6240\u6709\u540C\u6B65\u7684UP\u4E3B").addToggle((toggle) => toggle.setValue(this.plugin.settings.enableIndexNote).onChange(async (value) => {
       this.plugin.settings.enableIndexNote = value;
       await this.plugin.saveSettings();
       this.display();
     }));
     if (this.plugin.settings.enableIndexNote) {
-      new import_obsidian5.Setting(containerEl).setName("\u7D22\u5F15\u6587\u4EF6\u540D\u79F0").setDesc("\u7D22\u5F15\u6587\u4EF6\u7684\u540D\u79F0\uFF08\u4E0D\u542B\u8DEF\u5F84\uFF09").addText((text) => text.setPlaceholder("B\u7AD9UP\u4E3B\u540C\u6B65\u7D22\u5F15.md").setValue(this.plugin.settings.indexNoteName).onChange(async (value) => {
+      new import_obsidian7.Setting(containerEl).setName("\u7D22\u5F15\u6587\u4EF6\u540D\u79F0").setDesc("\u7D22\u5F15\u6587\u4EF6\u7684\u540D\u79F0\uFF08\u4E0D\u542B\u8DEF\u5F84\uFF09").addText((text) => text.setPlaceholder("B\u7AD9UP\u4E3B\u540C\u6B65\u7D22\u5F15.md").setValue(this.plugin.settings.indexNoteName).onChange(async (value) => {
         this.plugin.settings.indexNoteName = value;
         await this.plugin.saveSettings();
       }));
     }
-    const syncRootSetting = new import_obsidian5.Setting(containerEl).setName("\u540C\u6B65\u6839\u76EE\u5F55").setDesc("\u76EE\u5F55\u9009\u62E9\u5668\u7684\u6839\u8DEF\u5F84\uFF0C\u7559\u7A7A\u8868\u793A\u6574\u4E2A\u4FDD\u9669\u5E93");
+    const syncRootSetting = new import_obsidian7.Setting(containerEl).setName("\u540C\u6B65\u6839\u76EE\u5F55").setDesc("\u76EE\u5F55\u9009\u62E9\u5668\u7684\u6839\u8DEF\u5F84\uFF0C\u7559\u7A7A\u8868\u793A\u6574\u4E2A\u4FDD\u9669\u5E93");
     const syncRootSelect = syncRootSetting.controlEl.createEl("select");
     syncRootSelect.createEl("option", { text: "\u6574\u4E2A\u4FDD\u9669\u5E93\uFF08\u6839\u76EE\u5F55\uFF09", value: "" });
     this.addFolderOptions(syncRootSelect, "");
@@ -1445,7 +1727,7 @@ var BilibiliSyncSettingTab = class extends import_obsidian5.PluginSettingTab {
     this.plugin.settings.excludedDirs.forEach((dir, index) => {
       const dirDiv = excludedDiv.createEl("div");
       dirDiv.addClass("bilibili-sync-excluded-item");
-      const dirSetting = new import_obsidian5.Setting(dirDiv).setName(`\u76EE\u5F55 ${index + 1}`);
+      const dirSetting = new import_obsidian7.Setting(dirDiv).setName(`\u76EE\u5F55 ${index + 1}`);
       const cascader = dirSetting.controlEl.createEl("div", { cls: "cascader-select" });
       this.createCascadingSelect(cascader, dir, async (newPath) => {
         this.plugin.settings.excludedDirs[index] = newPath;
@@ -1457,7 +1739,7 @@ var BilibiliSyncSettingTab = class extends import_obsidian5.PluginSettingTab {
         this.display();
       }));
     });
-    new import_obsidian5.Setting(containerEl).setName("\u6DFB\u52A0\u6392\u9664\u76EE\u5F55").setDesc("\u6DFB\u52A0\u8981\u6392\u9664\u7684\u76EE\u5F55\u8DEF\u5F84").addButton((button) => button.setButtonText("\u6DFB\u52A0").onClick(async () => {
+    new import_obsidian7.Setting(containerEl).setName("\u6DFB\u52A0\u6392\u9664\u76EE\u5F55").setDesc("\u6DFB\u52A0\u8981\u6392\u9664\u7684\u76EE\u5F55\u8DEF\u5F84").addButton((button) => button.setButtonText("\u6DFB\u52A0").onClick(async () => {
       this.plugin.settings.excludedDirs.push("");
       await this.plugin.saveSettings();
       this.display();
@@ -1466,10 +1748,10 @@ var BilibiliSyncSettingTab = class extends import_obsidian5.PluginSettingTab {
   addFolderOptions(select, basePath) {
     const vault = this.app.vault;
     const root = basePath ? vault.getAbstractFileByPath(basePath) : vault.getRoot();
-    if (root instanceof import_obsidian5.TFolder) {
+    if (root instanceof import_obsidian7.TFolder) {
       const addFolders = (folder, prefix) => {
         for (const child of folder.children) {
-          if (child instanceof import_obsidian5.TFolder && !child.name.startsWith(".")) {
+          if (child instanceof import_obsidian7.TFolder && !child.name.startsWith(".")) {
             const path = prefix ? `${prefix}/${child.name}` : child.name;
             select.createEl("option", { text: path, value: path });
             addFolders(child, path);
@@ -1484,7 +1766,7 @@ var BilibiliSyncSettingTab = class extends import_obsidian5.PluginSettingTab {
     container.addClass("cascader-container");
     const vault = this.app.vault;
     const root = basePath ? vault.getAbstractFileByPath(basePath) : vault.getRoot();
-    if (!(root instanceof import_obsidian5.TFolder))
+    if (!(root instanceof import_obsidian7.TFolder))
       return;
     const pathParts = initialPath ? initialPath.split("/") : [];
     const selects = [];
@@ -1496,7 +1778,7 @@ var BilibiliSyncSettingTab = class extends import_obsidian5.PluginSettingTab {
       let parentFolder = null;
       if (parentPath) {
         const file = vault.getAbstractFileByPath(parentPath);
-        if (file instanceof import_obsidian5.TFolder) {
+        if (file instanceof import_obsidian7.TFolder) {
           parentFolder = file;
         }
       } else {
@@ -1504,7 +1786,7 @@ var BilibiliSyncSettingTab = class extends import_obsidian5.PluginSettingTab {
       }
       if (parentFolder) {
         for (const child of parentFolder.children) {
-          if (child instanceof import_obsidian5.TFolder && !child.name.startsWith(".")) {
+          if (child instanceof import_obsidian7.TFolder && !child.name.startsWith(".")) {
             select.createEl("option", { text: child.name, value: child.name });
           }
         }

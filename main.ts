@@ -3,6 +3,8 @@ import { BilibiliClient, ImportTarget, Video, Collection } from './src/bilibili-
 import { ObsidianWriter, SourceInfo } from './src/obsidian-writer';
 import { StateStore } from './src/storage';
 import { SyncPanel, VIEW_TYPE_BILIBILI_SYNC } from './src/sync-panel';
+import { WebClipper, WebClipResult } from './src/web-clipper';
+import { WebClipperPanel, VIEW_TYPE_WEB_CLIPPER } from './src/web-clipper-panel';
 
 interface BilibiliSyncSettings {
   enableIndexNote: boolean;
@@ -35,12 +37,23 @@ export default class BilibiliSyncPlugin extends Plugin {
       (leaf) => new SyncPanel(leaf, this)
     );
     
+    this.registerView(
+      VIEW_TYPE_WEB_CLIPPER,
+      (leaf) => new WebClipperPanel(leaf, this)
+    );
+    
     // 添加左侧边栏图标
     const ribbonIconEl = this.addRibbonIcon('video', 'B站同步', (evt: MouseEvent) => {
       // 左键点击打开同步面板
       this.activateView();
     });
     ribbonIconEl.setAttribute('aria-label', 'B站同步');
+    
+    // 网页剪藏图标
+    const webClipperIconEl = this.addRibbonIcon('globe', '网页剪藏', (evt: MouseEvent) => {
+      this.activateWebClipperView();
+    });
+    webClipperIconEl.setAttribute('aria-label', '网页剪藏');
     
     // 右键菜单
     ribbonIconEl.addEventListener('contextmenu', (evt: MouseEvent) => {
@@ -64,6 +77,12 @@ export default class BilibiliSyncPlugin extends Plugin {
       id: 'sync-bilibili-url',
       name: '同步B站链接',
       callback: () => this.openSyncModal(),
+    });
+    
+    this.addCommand({
+      id: 'web-clipper',
+      name: '网页剪藏',
+      callback: () => this.activateWebClipperView(),
     });
     
     this.addCommand({
@@ -126,6 +145,30 @@ export default class BilibiliSyncPlugin extends Plugin {
         leaf = rightLeaf;
         await leaf.setViewState({
           type: VIEW_TYPE_BILIBILI_SYNC,
+          active: true,
+        });
+      }
+    }
+    
+    if (leaf) {
+      workspace.revealLeaf(leaf);
+    }
+  }
+
+  async activateWebClipperView() {
+    const { workspace } = this.app;
+    
+    let leaf: WorkspaceLeaf | null = null;
+    const leaves = workspace.getLeavesOfType(VIEW_TYPE_WEB_CLIPPER);
+    
+    if (leaves.length > 0) {
+      leaf = leaves[0];
+    } else {
+      const rightLeaf = workspace.getRightLeaf(false);
+      if (rightLeaf) {
+        leaf = rightLeaf;
+        await leaf.setViewState({
+          type: VIEW_TYPE_WEB_CLIPPER,
           active: true,
         });
       }
