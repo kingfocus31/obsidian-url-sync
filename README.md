@@ -78,7 +78,7 @@
 **BRAT 插件安装（推荐）：**
 1. 先安装 [BRAT](https://github.com/TfTHacker/obsidian42-brat) 插件
 2. 打开 BRAT 设置 > Beta Plugin List > Add Beta plugin
-3. 输入仓库地址：`kingfocus31/obsidian-url-sync`
+3. 输入仓库地址：`https://github.com/kingfocus31/obsidian-url-sync`
 4. 点击 Install，等待安装完成
 5. 启用插件
 
@@ -167,9 +167,9 @@
 
 如果觉得这个插件很有用，并且想要它继续开发，请在以下方式支持我们，感谢您对开源软件的支持:
 
-| 微信赞赏 | 
+| 微信赞赏 |
 | :---: |
-| ![微信赞赏](screenshots/wechat.jpg) |
+| <img src="screenshots/wechat.jpg" width="200"> |
 
 ---
 
