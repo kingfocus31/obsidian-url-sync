@@ -4,8 +4,8 @@
 
 将B站UP主、合集、系列的视频列表快速同步到Obsidian笔记。
 
-[![GitHub release](https://img.shields.io/github/v/release/kingfocus31/obsidian-url-sync?style=flat-square)](https://github.com/kingfocus31/obsidian-url-sync/releases)
-[![License](https://img.shields.io/github/license/kingfocus31/obsidian-url-sync?style=flat-square)](LICENSE)
+[![GitHub release](https://img.shields.io/github/v/release/kingfocus31/obsidian-url-sync)](https://github.com/kingfocus31/obsidian-url-sync/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > 快速同步B站视频列表到Obsidian，支持UP主主页、合集、系列等多种链接格式，自动增量更新，历史记录一键重新同步。
 
