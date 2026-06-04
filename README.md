@@ -72,8 +72,15 @@
 
 ### 第一步：获取插件
 
-**商店搜索：**
-打开 Obsidian 设置 > 社区插件 > 浏览，搜索 "Bilibili to Obsidian" 进行安装。
+~~**商店搜索：**~~
+~~打开 Obsidian 设置 > 社区插件 > 浏览，搜索 "Bilibili to Obsidian" 进行安装。~~ *(暂未上架)*
+
+**BRAT 插件安装（推荐）：**
+1. 先安装 [BRAT](https://github.com/TfTHacker/obsidian42-brat) 插件
+2. 打开 BRAT 设置 > Beta Plugin List > Add Beta plugin
+3. 输入仓库地址：`kingfocus31/obsidian-url-sync`
+4. 点击 Install，等待安装完成
+5. 启用插件
 
 **手动下载：**
 从 [GitHub 发布页](https://github.com/kingfocus31/obsidian-url-sync/releases) 下载最新版本，将 `main.js`、`styles.css`、`manifest.json` 放入 `.obsidian/plugins/obsidian-bilibili-sync` 文件夹中。
